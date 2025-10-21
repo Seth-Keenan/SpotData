@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { getTopItems } from "@/services/spotify.utils";
+import { getTopItemsLimit } from "@/services/spotify.utils";
 import { Loader2, CheckCircle2 } from "lucide-react";
 
 export default function PlaylistCreator({ token }: Readonly<{ token: string }>) {
@@ -11,52 +11,76 @@ export default function PlaylistCreator({ token }: Readonly<{ token: string }>) 
   const [success, setSuccess] = useState<string | null>(null);
 
   const handleCreate = async () => {
-    setLoading(true);
-    setSuccess(null);
+  setLoading(true);
+  setSuccess(null);
 
+  try {
+    const topTracks = await getTopItemsLimit(token, "tracks", timeRange, limit.toString());
+    const trackUris = (topTracks as any[]).slice(0, limit).map((t) => t.uri);
+
+    const profileRes = await fetch("https://api.spotify.com/v1/me", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!profileRes.ok) {
+      const errText = await profileRes.text();
+      throw new Error(`Failed to fetch profile (${profileRes.status}): ${errText}`);
+    }
+    const profile = await profileRes.json();
+
+    const createRes = await fetch(
+      `https://api.spotify.com/v1/users/${profile.id}/playlists`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: `DataSpot Top ${limit}`,
+          description: "Playlist created with your top songs via DataSpot",
+          public: false,
+        }),
+      }
+    );
+
+    const createText = await createRes.text();
+    let playlist;
     try {
-      const topTracks = await getTopItems(token, "tracks", timeRange);
-      const trackUris = (topTracks as any[]).slice(0, limit).map((t) => t.uri);
+      playlist = JSON.parse(createText);
+    } catch {
+      throw new Error(`Failed to parse playlist JSON: ${createText}`);
+    }
 
-      const profileRes = await fetch("/api/spotify/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const profile = await profileRes.json();
+    if (!createRes.ok) {
+      console.group("Spotify playlist creation failed");
+      console.error("Status:", createRes.status, createRes.statusText);
+      console.error("Headers:", Object.fromEntries(createRes.headers.entries()));
+      console.error("Body:", createText);
+      console.groupEnd();
+      throw new Error(`Failed to create playlist (${createRes.status})`);
+    }
 
-      const createRes = await fetch(
-        `https://api.spotify.com/v1/users/${profile.id}/playlists`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            name: `DataSpot Top ${limit} – ${timeRange.replace("_", " ")}`,
-            description: "Playlist created with your top songs via DataSpot",
-            public: false,
-          }),
-        }
-      );
+    await fetch(`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ uris: trackUris }),
+    });
 
-      const playlist = await createRes.json();
+    const playlistUrl = playlist?.external_urls?.spotify;
+    if (!playlistUrl)
+      console.warn("No external_urls.spotify found:", playlist);
 
-      await fetch(
-        `https://api.spotify.com/v1/playlists/${playlist.id}/tracks`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ uris: trackUris }),
-        }
-      );
-
-      setSuccess(playlist.external_urls.spotify);
+    setSuccess(playlistUrl || null);
     } catch (err) {
       console.error("Error creating playlist:", err);
     } finally {
       setLoading(false);
     }
-  };
+  };  
 
   return (
     <div className="bg-white/5 backdrop-blur-md rounded-2xl p-8 shadow-xl space-y-6 max-w-lg mx-auto">
@@ -117,7 +141,7 @@ export default function PlaylistCreator({ token }: Readonly<{ token: string }>) 
         <div className="flex items-center gap-2 text-green-400 mt-4 animate-fadeIn">
           <CheckCircle2 size={20} />
           <span>
-            🎉 Playlist created!{" "}
+            Playlist created!{" "}
             <a href={success} target="_blank" className="underline hover:text-green-300">
               Open in Spotify
             </a>

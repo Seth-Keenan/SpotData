@@ -1,4 +1,4 @@
-import DashboardClient from "@/componets/DashboardClient";
+import DashboardClient from "@/app/dashboard/DashboardClient";
 import { getSpotifyProfile } from "@/services/spotify.utils";
 import { cookies } from "next/headers";
 

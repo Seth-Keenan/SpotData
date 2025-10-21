@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import PlaylistGrid from "@/componets/PlaylistGrid";
-import PlaylistCreator from "@/componets/PlaylistCreator";
+import PlaylistGrid from "@/app/playlists/PlaylistGrid";
+import PlaylistCreator from "@/app/playlists/PlaylistCreator";
 import { SpotifyPlaylist } from "@/types/spotify.models";
 
 export default function PlaylistPage({

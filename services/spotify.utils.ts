@@ -57,6 +57,26 @@ export const getTopItems = async (token: string, type: string, time_range: strin
   return data.items as SpotifyTrack[];
 }
 
+export const getTopItemsLimit = async (token: string, type: string, time_range: string, limit: string) => {
+  const response = await fetch(`https://api.spotify.com/v1/me/top/${type}?time_range=${time_range}&limit=${limit}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(`Spotify /top request failed: ${response.status} ${text}`);
+  }
+
+  const data = await response.json();
+
+  if (type === "artists") {
+    return data.items as SpotifyArtist[];
+  }
+  
+  return data.items as SpotifyTrack[];
+}
+
 export const getTopGenres = async (token: string, type: string, time_range: string) => {
   const response = await fetch(`https://api.spotify.com/v1/me/top/${type}?time_range=${time_range}&limit=50`, {
     headers: { Authorization: `Bearer ${token}` },
