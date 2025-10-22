@@ -1,15 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-
-  const error = searchParams.get("error");
-  if (error === "access_denied") {
-    return NextResponse.redirect(new URL("/", req.url));
-  }
-
   const code = searchParams.get("code");
-  if (!code) {
+  const error = searchParams.get("error");
+
+  if (error || !code) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
@@ -22,7 +18,6 @@ export async function GET(req: Request) {
       ? "https://spot-data-ray3.vercel.app"
       : "http://127.0.0.1:3000";
 
-  // Exchange code for tokens
   const tokenRes = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
     headers: {
@@ -38,34 +33,32 @@ export async function GET(req: Request) {
 
   if (!tokenRes.ok) {
     const text = await tokenRes.text().catch(() => "");
-    return NextResponse.json(
-      { error: `Spotify token exchange failed`, details: text },
-      { status: tokenRes.status }
-    );
+    console.error("Spotify token exchange failed:", text);
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
   const tokens = await tokenRes.json();
 
-  const redirectUrl = new URL("/dashboard", new URL(req.url).origin);
+  const redirectUrl = new URL("/dashboard", req.url);
   const response = NextResponse.redirect(redirectUrl);
 
   response.cookies.set("spotify_access_token", tokens.access_token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge: tokens.expires_in,
     path: "/",
+    maxAge: tokens.expires_in,
   });
-
-  console.log("Setting token cookie:", tokens.access_token?.slice(0,10));
 
   if (tokens.refresh_token) {
     response.cookies.set("spotify_refresh_token", tokens.refresh_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
       path: "/",
     });
   }
 
+  console.log("Cookies set successfully!");
   return response;
 }
