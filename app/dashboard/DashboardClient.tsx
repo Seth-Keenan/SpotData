@@ -3,11 +3,12 @@
 import { useState } from "react";
 import TopItems from "@/componets/TopItems";
 import Graph from "@/componets/Graph";
+import { SpotifyProfile } from "@/types/spotify.models";
 
 export default function DashboardClient({
   token,
   profile,
-}: Readonly<{ token: string; profile: any }>) {
+}: Readonly<{ token: string; profile: SpotifyProfile }>) {
   const [type, setType] = useState<"artists" | "tracks">("artists");
   const [timeRange, setTimeRange] = useState<
     "short_term" | "medium_term" | "long_term"

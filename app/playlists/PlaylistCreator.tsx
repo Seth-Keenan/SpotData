@@ -16,7 +16,7 @@ export default function PlaylistCreator({ token }: Readonly<{ token: string }>) 
 
   try {
     const topTracks = await getTopItemsLimit(token, "tracks", timeRange, limit.toString());
-    const trackUris = (topTracks as any[]).slice(0, limit).map((t) => t.uri);
+    const trackUris = (topTracks).slice(0, limit).map((t) => t.uri);
 
     const profileRes = await fetch("https://api.spotify.com/v1/me", {
       headers: { Authorization: `Bearer ${token}` },
@@ -96,7 +96,9 @@ export default function PlaylistCreator({ token }: Readonly<{ token: string }>) 
         </label>
         <select
           value={timeRange}
-          onChange={(e) => setTimeRange(e.target.value as any)}
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+            setTimeRange(e.target.value as "short_term" | "medium_term" | "long_term")
+          }
           className="bg-gray-800 text-white rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-green-500 focus:outline-none"
         >
           <option value="short_term">Last Month</option>
