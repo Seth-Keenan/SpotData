@@ -24,7 +24,7 @@ export type SpotifyPlaylistResponse = {
 export type SpotifyArtist = {
   id: string;
   name: string;
-  uri: string; // add this
+  uri: string;
   genres: string[];
   images: { url: string; width: number; height: number }[];
   popularity: number;

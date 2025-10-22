@@ -52,9 +52,12 @@ export async function GET(req: Request) {
   response.cookies.set("spotify_access_token", tokens.access_token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
     maxAge: tokens.expires_in,
     path: "/",
   });
+
+  console.log("Setting token cookie:", tokens.access_token?.slice(0,10));
 
   if (tokens.refresh_token) {
     response.cookies.set("spotify_refresh_token", tokens.refresh_token, {
