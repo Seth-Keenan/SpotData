@@ -2,21 +2,25 @@ import { NextResponse } from "next/server";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  
+
   const error = searchParams.get("error");
   if (error === "access_denied") {
-    return NextResponse.redirect(new URL("http://127.0.0.1:3000/", req.url));
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
   const code = searchParams.get("code");
   if (!code) {
-    return NextResponse.redirect(new URL("http://127.0.0.1:3000/", req.url));
+    return NextResponse.redirect(new URL("/", req.url));
   }
-  
 
   const creds = Buffer.from(
     `${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`
   ).toString("base64");
+
+  const baseUrl =
+    process.env.NODE_ENV === "production"
+      ? "https://spot-data-ray3.vercel.app"
+      : "http://127.0.0.1:3000";
 
   // Exchange code for tokens
   const tokenRes = await fetch("https://accounts.spotify.com/api/token", {
@@ -28,7 +32,7 @@ export async function GET(req: Request) {
     body: new URLSearchParams({
       grant_type: "authorization_code",
       code,
-      redirect_uri: "http://127.0.0.1:3000/api/spotify/callback",
+      redirect_uri: `${baseUrl}/api/spotify/callback`,
     }),
   });
 
@@ -42,17 +46,20 @@ export async function GET(req: Request) {
 
   const tokens = await tokenRes.json();
 
-  const response = NextResponse.redirect("http://127.0.0.1:3000/dashboard");
+  const redirectUrl = new URL("/dashboard", new URL(req.url).origin);
+  const response = NextResponse.redirect(redirectUrl);
+
   response.cookies.set("spotify_access_token", tokens.access_token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     maxAge: tokens.expires_in,
     path: "/",
   });
+
   if (tokens.refresh_token) {
     response.cookies.set("spotify_refresh_token", tokens.refresh_token, {
       httpOnly: true,
-      secure: false, // This might need to be changed later
+      secure: process.env.NODE_ENV === "production",
       path: "/",
     });
   }
